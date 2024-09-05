@@ -86,6 +86,9 @@ class CACHE : public champsim::operable
 
     uint32_t pf_metadata;
     uint32_t cpu;
+    
+    //bank id
+    uint32_t bank_id;
 
     access_type type;
     bool prefetch_from_this;
@@ -113,6 +116,7 @@ class CACHE : public champsim::operable
 
     uint32_t pf_metadata;
     uint32_t cpu;
+    uint32_t bank_id;
 
     access_type type;
     bool prefetch_from_this;
@@ -174,8 +178,10 @@ public:
   channel_type* lower_translate;
 
   uint32_t cpu = 0;
-  //number of banks
+  //DEVANSHU
   const uint32_t NUM_BANKS;
+  const uint64_t NUMA_LAT;
+
   const std::string NAME;
   const uint32_t NUM_SET, NUM_WAY, MSHR_SIZE;
   const std::size_t PQ_SIZE;
@@ -328,8 +334,9 @@ public:
     bool m_wq_full_addr{};
     bool m_va_pref{};
 
-    //banks
+    //DEVANSHU
     uint32_t m_num_banks{1};
+    uint64_t m_numa_lat{0};
 
 
     unsigned m_pref_act_mask{};
@@ -341,7 +348,7 @@ public:
 
     template <unsigned long long OTHER_P, unsigned long long OTHER_R>
     Builder(builder_conversion_tag, const Builder<OTHER_P, OTHER_R>& other)
-        : m_name(other.m_name), m_num_banks(other.m_num_banks), m_freq_scale(other.m_freq_scale), m_sets(other.m_sets), m_ways(other.m_ways), m_pq_size(other.m_pq_size),
+        : m_name(other.m_name), m_num_banks(other.m_num_banks),m_numa_lat(other.m_numa_lat), m_freq_scale(other.m_freq_scale), m_sets(other.m_sets), m_ways(other.m_ways), m_pq_size(other.m_pq_size),
           m_mshr_size(other.m_mshr_size), m_hit_lat(other.m_hit_lat), m_fill_lat(other.m_fill_lat), m_latency(other.m_latency), m_max_tag(other.m_max_tag),
           m_max_fill(other.m_max_fill), m_offset_bits(other.m_offset_bits), m_pref_load(other.m_pref_load), m_wq_full_addr(other.m_wq_full_addr),
           m_va_pref(other.m_va_pref), m_pref_act_mask(other.m_pref_act_mask), m_uls(other.m_uls), m_ll(other.m_ll), m_lt(other.m_lt)
@@ -356,9 +363,15 @@ public:
       m_name = name_;
       return *this;
     }
+    // DEVANSHU
     self_type& banks(uint32_t num_banks)
     {
       m_num_banks = num_banks;
+      return *this;
+    }
+    self_type& numa_latency(uint64_t numa_lat)
+    {
+      m_numa_lat = numa_lat;
       return *this;
     }
     self_type& frequency(double freq_scale_)
@@ -481,7 +494,7 @@ public:
 
   template <unsigned long long P_FLAG, unsigned long long R_FLAG>
   explicit CACHE(Builder<P_FLAG, R_FLAG> b)
-      : champsim::operable(b.m_freq_scale), NUM_BANKS(b.m_num_banks),sim_stats(b.m_num_banks),
+      : champsim::operable(b.m_freq_scale), NUM_BANKS(b.m_num_banks), NUMA_LAT(b.m_numa_lat),sim_stats(b.m_num_banks),
         roi_stats(b.m_num_banks), upper_levels(std::move(b.m_uls)), lower_level(b.m_ll), lower_translate(b.m_lt), NAME(b.m_name), NUM_SET(b.m_sets),
         NUM_WAY(b.m_ways), MSHR_SIZE(b.m_mshr_size), PQ_SIZE(b.m_pq_size), HIT_LATENCY((b.m_hit_lat > 0) ? b.m_hit_lat : b.m_latency - b.m_fill_lat),
         FILL_LATENCY(b.m_fill_lat), OFFSET_BITS(b.m_offset_bits), MAX_TAG(b.m_max_tag), MAX_FILL(b.m_max_fill), prefetch_as_load(b.m_pref_load),
